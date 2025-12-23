@@ -1,0 +1,105 @@
+// SPDX-License-Identifier: GPL-2.0
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "ti/k3-pinctrl.h"
+
+/*
+ * Helper to show loaded overlays under: /proc/device-tree/chosen/overlays/
+ */
+&{/chosen} {
+	overlays {
+		BBAI64-FAN.kernel = __TIMESTAMP__;
+	};
+};
+
+&main_pmx0 {
+	fan_pwm_pins_default: fan-pwm-pins-default {
+		pinctrl-single,pins = <
+			J721E_IOPAD(0x190, PIN_OUTPUT, 6) /* (W23) RGMII6_TD3.EHRPWM3_B */
+			J721E_IOPAD(0x18c, PIN_OUTPUT, 6) /* (V23) RGMII6_RX_CTL.EHRPWM3_A */
+		>;
+	};
+
+	fan_tach_pins_default: fan-tach-pins-default {
+		pinctrl-single,pins = <
+			J721E_IOPAD(0x194, PIN_INPUT_PULLUP, 7) /* (W28) RGMII6_TD2.GPIO0_100 */
+		>;
+	};
+};
+
+&main_ehrpwm3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&fan_pwm_pins_default>;
+	status = "okay";
+};
+
+&{/} {
+	fan: pwm-fan {
+		compatible = "pwm-fan";
+		pwms = <&main_ehrpwm3 1 40000 0>; /* EHRPWM3 channel B, 40000ns (25kHz) */
+		cooling-levels = <0 100 140 180 220 255>;
+		interrupt-parent = <&main_gpio0>;
+		interrupts = <100 IRQ_TYPE_EDGE_FALLING>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&fan_tach_pins_default>;
+		#cooling-cells = <2>;
+		pulses-per-revolution = <2>;
+	};
+};
+
+&mpu_thermal {
+	trips {
+		mpu_active0: mpu-active0 {
+			temperature = <35000>;
+			hysteresis = <2000>;
+			type = "active";
+		};
+		mpu_active1: mpu-active1 {
+			temperature = <45000>;
+			hysteresis = <2000>;
+			type = "active";
+		};
+		mpu_active2: mpu-active2 {
+			temperature = <55000>;
+			hysteresis = <2000>;
+			type = "active";
+		};
+		mpu_active3: mpu-active3 {
+			temperature = <65000>;
+			hysteresis = <2000>;
+			type = "active";
+		};
+		mpu_active4: mpu-active4 {
+			temperature = <75000>;
+			hysteresis = <2000>;
+			type = "active";
+		};
+	};
+
+	cooling-maps {
+		map0 {
+			trip = <&mpu_active0>;
+			cooling-device = <&fan 1 1>;
+		};
+		map1 {
+			trip = <&mpu_active1>;
+			cooling-device = <&fan 2 2>;
+		};
+		map2 {
+			trip = <&mpu_active2>;
+			cooling-device = <&fan 3 3>;
+		};
+		map3 {
+			trip = <&mpu_active3>;
+			cooling-device = <&fan 4 4>;
+		};
+		map4 {
+			trip = <&mpu_active4>;
+			cooling-device = <&fan 5 5>;
+		};
+	};
+};
